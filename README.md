@@ -50,6 +50,7 @@ If you have any questions or need assistance, feel free to join our **community 
 | **AUTO_BUY_UPGRADE**        | <small>`True` or `False`</small>                                                    |
 | **AUTO_TASK**               | <small>`True` or `False`</small>                                                    |
 | **AUTO_CLAIM_SQUAD_BONUS**  | <small>`True` or `False`</small>                                                    |
+| **USE_PROXY**               | <small>`True` or `False`(default `False`)</small>                                   |
 
 
 ## Step 1: Preparation
