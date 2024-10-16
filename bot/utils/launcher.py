@@ -36,10 +36,16 @@ async def smooth_progress(description, total_steps=100, duration=5):
 def display_menu(choices, session_count, proxy_count):
     console = Console()
 
-    menu_text = "\n".join([f"[magenta][{i}][/magenta] {choice}" for i, choice in enumerate(choices, 1)])
+    menu_text = "\n".join([f"[red][{i}][/red] {choice}" for i, choice in enumerate(choices, 1)])
+
+    proxy_info = (
+        f"🛡️  Detected [cyan]{session_count}[/cyan] sessions and [cyan]{proxy_count}[/cyan] proxies"
+        if settings.USE_PROXY else
+        f"🛡️  Detected [cyan]{session_count}[/cyan] sessions (running without proxies)"
+    )
 
     panel_content = (
-        f"🛡️  Detected [cyan]{session_count}[/cyan] sessions and [cyan]{proxy_count}[/cyan] proxies\n\n"
+        f"{proxy_info}\n\n"
         f"{menu_text}"
     )
 
@@ -47,7 +53,7 @@ def display_menu(choices, session_count, proxy_count):
         panel_content,
         title="Session Information",
         title_align="center",
-        border_style="dim magenta",
+        border_style="dim red",
         style="bold white",
         padding=(1, 4),
     )
