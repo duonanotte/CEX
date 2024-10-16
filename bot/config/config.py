@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     AUTO_TASK: bool = False
     AUTO_CLAIM_SQUAD_BONUS: bool = False
 
+    USE_PROXY: bool = False
+
 
 settings = Settings()
 
