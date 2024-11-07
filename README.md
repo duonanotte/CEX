@@ -44,6 +44,7 @@ If you have any questions or need assistance, feel free to join our **community 
 | **API_ID / API_HASH**       | <small>Telegram platform credentials for starting the session</small>               |
 | **USE_RANDOM_DELAY_IN_RUN** | <small>Run the session with a random delay `True`, without delay `False`</small>    |
 | **RANDOM_DELAY_IN_RUN**     | <small>Random delay in the range `[0, 36000]`</small>                               |
+| **REF_LINK**                | <small>`"https://t.me/cexio_tap_bot?start=1716965343267932"`</small>                |
 | **AUTO_TAP**                | <small>`True` or `False`</small>                                                    |
 | **RANDOM_TAPS_COUNT**       | <small>`[25, 75]`</small>                                                           |
 | **SLEEP_BETWEEN_TAPS**       | <small>`[25, 35]`</small>                                                          |
