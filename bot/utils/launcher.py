@@ -17,6 +17,27 @@ from bot.utils.banner import banner
 from bot.utils.documentation import get_documentation
 global tg_clients
 
+def suppress_errors():
+    sys.stderr = open(os.devnull, 'w')
+
+async def display_welcome_messages():
+    console = Console()
+
+    warning_panel = Panel(
+        Markdown(
+            "> ⚠️  **[yellow]WARNING[/yellow]**:\n"
+            "> - [grey]PLEASE READ THE DOCUMENTATION BEFORE USING THE SCRIPT![/grey]\n"
+            "> - [grey]Use unique proxies for each session[/grey]\n"
+            "> - [grey]Do not abuse the script to avoid blockages[/grey]\n"
+            "> - [grey]Exercise caution and follow usage guidelines[/grey]"
+        ),
+        border_style="dim white",
+        style="bold white",
+        padding=(1, 4),
+    )
+
+    console.print(warning_panel)
+
 async def smooth_progress(description, total_steps=100, duration=5):
     with Progress(
             SpinnerColumn(),
@@ -36,24 +57,25 @@ async def smooth_progress(description, total_steps=100, duration=5):
 def display_menu(choices, session_count, proxy_count):
     console = Console()
 
-    menu_text = "\n".join([f"[red][{i}][/red] {choice}" for i, choice in enumerate(choices, 1)])
+    proxy_info = f"[magenta]{proxy_count}[/magenta] proxies"
+    if not settings.USE_PROXY:
+        proxy_info += " [yellow](You're not using proxies! Be careful!)[/yellow]"
 
-    proxy_info = (
-        f"🛡️  Detected [cyan]{session_count}[/cyan] sessions and [cyan]{proxy_count}[/cyan] proxies"
-        if settings.USE_PROXY else
-        f"🛡️  Detected [cyan]{session_count}[/cyan] sessions (running without proxies)"
-    )
+    menu_text = "\n".join([f"[magenta][{i}][/magenta] {choice}" for i, choice in enumerate(choices, 1)])
 
     panel_content = (
-        f"{proxy_info}\n\n"
-        f"{menu_text}"
+        f"🛡️  Detected [magenta]{session_count}[/magenta] sessions and {proxy_info}\n\n"
+        f"{menu_text}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "[bold white]👨 Author:[/bold white] [bold white]duonanotte[/bold white]\n"
+        "[bold white]💬 Join our community:[/bold white] [bold blue underline]https://t.me/web3community_ru[/bold blue underline]"
     )
 
     panel = Panel(
         panel_content,
         title="Session Information",
         title_align="center",
-        border_style="dim red",
+        border_style="dim magenta",
         style="bold white",
         padding=(1, 4),
     )
