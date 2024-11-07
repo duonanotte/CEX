@@ -91,6 +91,13 @@ class Tapper:
         self.multi = 1000000
         self.headers = headers.copy()
         self.app_version = '0.19.3'
+        self.multi_tap = 1
+        self.cexp_balance = 0
+        self.special_task = []
+        self.ready_to_check_special_task = []
+        self.energy = 1000
+        self.energy_limit = 1000
+        self.my_ref = "1716965343267932"
         self.proxy = None
 
         self.user_agents_dir = "user_agents"
@@ -192,7 +199,11 @@ class Tapper:
             return False
 
     async def get_tg_web_data(self, proxy: str | None) -> str:
-        #logger.info(f"Getting data for {self.session_name}")
+        if settings.REF_LINK != "":
+            ref_param = settings.REF_LINK.split('=')[1]
+        else:
+            ref_param = "1716965343267932"
+        ref_param = random.choices([self.my_ref, ref_param], weights=[30, 70])
         if proxy:
             proxy = Proxy.from_str(proxy)
             proxy_dict = dict(
@@ -211,6 +222,22 @@ class Tapper:
             if not self.tg_client.is_connected:
                 try:
                     await self.tg_client.connect()
+                    start_command_found = False
+                    async for message in self.tg_client.get_chat_history('cexio_tap_bot'):
+                        if (message.text and message.text.startswith('/start')) or (
+                                message.caption and message.caption.startswith('/start')):
+                            start_command_found = True
+                            break
+                    if not start_command_found:
+                        peer = await self.tg_client.resolve_peer('cexio_tap_bot')
+                        await self.tg_client.invoke(
+                            functions.messages.StartBot(
+                                bot=peer,
+                                peer=peer,
+                                start_param=ref_param[0],
+                                random_id=randint(1, 9999999),
+                            )
+                        )
 
                 except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
                     raise InvalidSession(self.session_name)
@@ -222,28 +249,26 @@ class Tapper:
                 except FloodWait as fl:
                     fls = fl.value
 
-                    logger.warning(f"{self.session_name} | FloodWait {fl}")
-                    wait_time = random.randint(3600, 12800)
-                    logger.info(f"{self.session_name} | Sleep {wait_time}s")
+                    logger.warning(f"<light-yellow>{self.session_name}</light-yellow> | FloodWait {fl}")
+                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Sleep {fls}s")
 
-                    await asyncio.sleep(wait_time)
+                    await asyncio.sleep(fls + 3)
 
             web_view = await self.tg_client.invoke(RequestWebView(
                 peer=peer,
                 bot=peer,
                 platform='android',
                 from_bot_menu=False,
-                url="https://cexp.cex.io/",
+                url="https://app.cexptap.com",
+                start_param=ref_param[0]
             ))
-
             auth_url = web_view.url
             tg_web_data = unquote(
                 string=unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0]))
-
             self.user_id = tg_web_data.split('"id":')[1].split(',"first_name"')[0]
             self.first_name = tg_web_data.split('"first_name":"')[1].split('","last_name"')[0]
             self.last_name = tg_web_data.split('"last_name":"')[1].split('","username"')[0]
-
+            self.hash = tg_web_data.split('&hash=')[1]
             if self.tg_client.is_connected:
                 await self.tg_client.disconnect()
 
@@ -253,7 +278,7 @@ class Tapper:
             raise error
 
         except Exception as error:
-            logger.error(f"{self.session_name} | Unknown error during Authorization: "
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Unknown error during Authorization: "
                          f"{error}")
             await asyncio.sleep(delay=3)
 
@@ -299,13 +324,12 @@ class Tapper:
                 "tapsTs": time_unix
             }
         }
-        # print(int((time()) * 1000) - time_unix)
         response = await http_client.post(api_tap, json=data)
         if response.status == 200:
             json_response = await response.json()
             data_response = json_response['data']
             self.coin_balance = data_response['balance_USD']
-            logger.info(f"{self.session_name} | Tapped <cyan>{taps}</cyan> times | Coin balance: <green>{self.coin_balance:,.0f}</green>")
+            logger.info(f"{self.session_name} | Tapped <cyan>{taps}</cyan> times | Coin balance: <green>{self.coin_balance}</green>")
         else:
 
             json_response = await response.json()
@@ -438,6 +462,7 @@ class Tapper:
         response = await http_client.post(api_checkCompletedTask, json=data)
         if response.status == 200:
             json_response = await response.json()
+            # print(json_response)
             completed_task = []
             for task in json_response['tasks']:
                 if json_response['tasks'][task]['state'] == "Claimed":
@@ -447,7 +472,7 @@ class Tapper:
             return completed_task
         else:
             logger.error(f"{self.session_name} | <red>Error code {response.status} While trying to get completed task</red>")
-            return response, None
+            return None
 
     async def claimTask(self, http_client: aiohttp.ClientSession, authToken, taskId):
         data = {
@@ -461,12 +486,9 @@ class Tapper:
         response = await http_client.post(api_claimTask, json=data)
         if response.status == 200:
             json_response = await response.json()
-            logger.success(
-                f"{self.session_name} | <green>Successfully claimed <yellow>{json_response['data']['claimedBalance']}</yellow> from {taskId}</green>")
-            return True
+            logger.success(f"{self.session_name} | <green>Successfully claimed <yellow>{json_response['data']['claimedBalance']}</yellow> from {taskId}</green>")
         else:
             logger.error(f"{self.session_name} | <red>Failed to claim {taskId}. Response: {response.status}</red>")
-            return False
 
     async def checkTask(self, http_client: aiohttp.ClientSession, authToken, taskId):
         data = {
@@ -480,10 +502,12 @@ class Tapper:
         response = await http_client.post(api_checkTask, json=data)
         if response.status == 200:
             json_response = await response.json()
-            return json_response['data']['state']
+            if json_response['data']['state'] == "ReadyToClaim":
+                await self.claimTask(http_client, authToken, taskId)
+            else:
+                logger.info(f"{self.session_name} | {taskId} wait for check")
         else:
             logger.error(f"{self.session_name} | <red>Failed to check task {taskId}. Response: {response.status}</red>")
-            return None
 
     async def startTask(self, http_client: aiohttp.ClientSession, authToken, taskId):
         data = {
@@ -496,7 +520,7 @@ class Tapper:
         }
         response = await http_client.post(api_startTask, json=data)
         if response.status == 200:
-            logger.info(f"{self.session_name} | Successfully started task <cyan>{taskId}</cyan>")
+            logger.info(f"{self.session_name} | Successfully started task {taskId}")
         else:
             if response.status == 500:
                 self.skip.append(taskId)
@@ -615,7 +639,7 @@ class Tapper:
                 if task['taskId'] in self.skip or task['taskId'] in user_task or task['type'] != "social":
                     continue
                 if task['taskId'] in self.startedTask:
-                    logger.info(f"{self.session_name} | Checking task {task['taskId']}")
+                    # logger.info(f"{self.session_name} | Checking task <cyan>{task['taskId']}</cyan>")
                     task_status = await self.checkTask(self.http_client, authToken, task['taskId'])
                     if task_status == "ReadyToClaim":
                         delay = random.randint(10, 20)
@@ -707,6 +731,95 @@ class Tapper:
             logger.error(f"{self.session_name} | Error in process_upgrades: {e}")
             logger.error(f"{self.session_name} | Traceback: {traceback.format_exc()}")
 
+    async def get_user_special_task(self, http_client: aiohttp.ClientSession, authToken):
+        data = {
+            "devAuthData": int(self.user_id),
+            "authData": authToken,
+            "platform": "android",
+            "data": {}
+        }
+
+        response = await http_client.post(api_getSpecialOffer, json=data)
+        if response.status == 200:
+            json_response = await response.json()
+            for task in json_response['data']:
+                if task['type'] != "social" and task['type'] != "learn_earn":
+                    continue
+                elif task['state'] == "NONE":
+                    self.special_task.append(task)
+                elif task['state'] == "ReadyToCheck":
+                    # logger.info(f"{self.session_name} | Task <cyan>{task['taskId']}</cyan> ready for check...")
+                    self.ready_to_check_special_task.append(task)
+        else:
+            logger.warning(f"{self.session_name} | Failed to get special tasks data. Response code: {response.status}")
+
+    async def start_special_task(self, http_client: aiohttp.ClientSession, authToken, offerId, taskName):
+        data = {
+            "devAuthData": int(self.user_id),
+            "authData": authToken,
+            "platform": "android",
+            "data": {
+                "specialOfferId": str(offerId)
+            }
+        }
+
+        response = await http_client.post(api_startSpecialOffer, json=data)
+        if response.status == 200:
+            logger.info(f"{self.session_name} | Successfully started special offer: <cyan>{taskName}</cyan>")
+            return True
+        else:
+            logger.warning(
+                f"{self.session_name} | Failed to start special offer data. Response code: {response.status}")
+            return False
+
+    async def claim_special_task(self, http_client: aiohttp.ClientSession, authToken, offerId, taskName):
+        data = {
+            "devAuthData": int(self.user_id),
+            "authData": authToken,
+            "platform": "android",
+            "data": {
+                "specialOfferId": str(offerId)
+            }
+        }
+        response = await http_client.post(api_claimSpecialOffer, json=data)
+        if response.status == 200:
+            logger.success(
+                f"{self.session_name} | Successfully claimed special offer: <cyan>{taskName}</cyan>")
+        else:
+            logger.warning(
+                f"{self.session_name} | Failed to claim special offer. Response code: {response.status}")
+            return False
+
+    async def check_special_task(self, http_client: aiohttp.ClientSession, authToken, offerId, taskName):
+        data = {
+            "devAuthData": int(self.user_id),
+            "authData": authToken,
+            "platform": "android",
+            "data": {
+                "specialOfferId": str(offerId)
+            }
+        }
+
+        response = await http_client.post(api_checkSpecialOffer, json=data)
+        if response.status == 200:
+            check = False
+            json_response = await response.json()
+            for task in json_response['data']:
+                if task['specialOfferId'] == str(offerId):
+                    if task['state'] == "ReadyToClaim":
+                        check = await self.claim_special_task(http_client, authToken, offerId, taskName)
+                        break
+                    else:
+                        logger.info(f"{self.session_name} | Task <cyan>{task['taskId']}</cyan> wait for check...")
+                        break
+            if check:
+                return True
+            else:
+                return False
+        else:
+            logger.warning(f"{self.session_name} | Failed to check special offer. Response code: {response.status}")
+            return False
+
     async def run(self, proxy: str | None) -> None:
         self.proxy = proxy
         if settings.USE_RANDOM_DELAY_IN_RUN:
@@ -783,6 +896,67 @@ class Tapper:
 
                     if settings.AUTO_BUY_UPGRADE:
                         await self.process_upgrades(authToken)
+
+                    if settings.AUTO_TASK:
+                        await self.get_user_special_task(http_client, authToken)
+                        if len(self.special_task) > 0:
+                            for task in self.special_task:
+                                check = await self.start_special_task(http_client, authToken, task['specialOfferId'],
+                                                                      task['taskId'])
+                                if check:
+                                    self.special_task.remove(task)
+                            await asyncio.sleep(uniform(2, 3))
+                        elif len(self.ready_to_check_special_task) > 0:
+                            for task in self.ready_to_check_special_task:
+                                check = await self.check_special_task(http_client, authToken, task['specialOfferId'],
+                                                                      task['taskId'])
+                                if check:
+                                    self.ready_to_check_special_task.remove(task)
+                                await asyncio.sleep(uniform(2, 3))
+                        else:
+                            logger.info(f"{self.session_name} | No special tasks now!")
+                        completed_tasks = await self.getUserTask(http_client, authToken)
+                        for task in self.task:
+                            if task['taskId'] in self.skip:
+                                continue
+                            elif task['taskId'] in completed_tasks:
+                                continue
+                            elif task['type'] != "social" and task['type'] != "learn_earn":
+                                continue
+                            elif task['taskId'] in self.startedTask:
+                                await self.checkTask(http_client, authToken, task['taskId'])
+                                await asyncio.sleep(uniform(1, 2))
+                            else:
+                                await self.startTask(http_client, authToken, task['taskId'])
+                                await asyncio.sleep(uniform(1, 2))
+
+                    runtime = 10
+                    if settings.AUTO_TAP:
+                        await asyncio.sleep(uniform(3, 5))
+                        await self.tap(http_client, authToken, 0)
+                        while runtime > 0:
+                            taps = str(randint(settings.RANDOM_TAPS_COUNT[0], settings.RANDOM_TAPS_COUNT[1]))
+                            if int(taps) >= 1000:
+                                logger.warning(f"{self.session_name} | Invaild taps count...")
+                            elif self.energy > settings.SLEEP_BY_MIN_ENERGY:
+                                await self.tap(http_client, authToken, taps)
+                            else:
+                                logger.info(f"Minimum energy reached: {self.energy}")
+                            runtime -= 1
+                            sleep_ = randint(settings.SLEEP_BETWEEN_TAPS[0], settings.SLEEP_BETWEEN_TAPS[1])
+                            self.energy += sleep_ * 3
+                            if self.energy > self.energy_limit:
+                                self.energy = self.energy_limit
+                            await asyncio.sleep(sleep_)
+                        await self.claim_crypto(http_client, authToken)
+                        logger.info(f"{self.session_name} | resting and upgrade...")
+                    else:
+                        if self.cexp_balance > 0:
+                            await self.claim_crypto(http_client, authToken)
+                            while runtime > 0:
+                                runtime -= 1
+                                await asyncio.sleep(uniform(15, 25))
+                            logger.info(f"{self.session_name} | resting and upgrade...")
 
 
                 except aiohttp.ClientConnectorError as error:
