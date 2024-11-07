@@ -3,6 +3,7 @@ import glob
 import asyncio
 import argparse
 import json
+import sys
 
 from pyrogram import Client
 from bot.config import settings
