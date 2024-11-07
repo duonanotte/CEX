@@ -44,7 +44,10 @@ If you have any questions or need assistance, feel free to join our **community 
 | **API_ID / API_HASH**       | <small>Telegram platform credentials for starting the session</small>               |
 | **USE_RANDOM_DELAY_IN_RUN** | <small>Run the session with a random delay `True`, without delay `False`</small>    |
 | **RANDOM_DELAY_IN_RUN**     | <small>Random delay in the range `[0, 36000]`</small>                               |
-| **AUTO_TAP**                | <small>`[25, 75]`</small>                                                           |
+| **AUTO_TAP**                | <small>`True` or `False`</small>                                                    |
+| **RANDOM_TAPS_COUNT**       | <small>`[25, 75]`</small>                                                           |
+| **SLEEP_BETWEEN_TAPS**       | <small>`[25, 35]`</small>                                                          |
+| **SLEEP_BY_MIN_ENERGY**       | <small>`250`</small>                                                              |
 | **AUTO_CONVERT**            | <small>`True` or `False`</small>                                                    |
 | **MINIMUM_TO_CONVERT**      | <small>`0.1`</small>                                                                |
 | **AUTO_BUY_UPGRADE**        | <small>`True` or `False`</small>                                                    |
