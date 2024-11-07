@@ -764,13 +764,7 @@ class Tapper:
 
                     await self.ensure_http_client()
 
-                    async def check_response(response):
-                        if response.status >= 400:
-                            logger.error(f"{self.session_name} | HTTP Error {response.status}. Stopping the script.")
-                            sys.exit(1)
-
-                    response = await self.get_user_info(self.http_client, authToken)
-                    await check_response(response)
+                    await self.get_user_info(self.http_client, authToken)
 
                     await self.fetch_data(self.http_client, authToken)
 
@@ -779,8 +773,7 @@ class Tapper:
                     if self.card is None or self.task is None:
                         await self.fetch_data(self.http_client, authToken)
 
-                    response = await self.claim_crypto(self.http_client, authToken)
-                    await check_response(response)
+                    await self.claim_crypto(self.http_client, authToken)
 
                     if settings.AUTO_CONVERT and self.btc_balance >= settings.MINIMUM_TO_CONVERT:
                         await self.convertBTC(self.http_client, authToken)
