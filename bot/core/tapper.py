@@ -949,14 +949,12 @@ class Tapper:
                                 self.energy = self.energy_limit
                             await asyncio.sleep(sleep_)
                         await self.claim_crypto(http_client, authToken)
-                        logger.info(f"{self.session_name} | resting and upgrade...")
                     else:
                         if self.cexp_balance > 0:
                             await self.claim_crypto(http_client, authToken)
                             while runtime > 0:
                                 runtime -= 1
                                 await asyncio.sleep(uniform(15, 25))
-                            logger.info(f"{self.session_name} | resting and upgrade...")
 
                     if settings.AUTO_CLAIM_SQUAD_BONUS:
                         pool_balance = await self.checkref(http_client, authToken)
