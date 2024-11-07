@@ -958,6 +958,10 @@ class Tapper:
                                 await asyncio.sleep(uniform(15, 25))
                             logger.info(f"{self.session_name} | resting and upgrade...")
 
+                    if settings.AUTO_CLAIM_SQUAD_BONUS:
+                        pool_balance = await self.checkref(http_client, authToken)
+                        if float(pool_balance) > 0:
+                            await self.claim_pool(http_client, authToken)
 
                 except aiohttp.ClientConnectorError as error:
                     delay = random.randint(1800, 3600)
